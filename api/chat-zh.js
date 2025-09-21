@@ -7,7 +7,7 @@ const openai = new OpenAI({
     apiKey: process.env.OPENROUTER_API_KEY,
     baseURL: "https://openrouter.ai/api/v1",
     defaultHeaders: {
-        "HTTP-Referer": process.env.YOUR_SITE_URL || "https://your-chinese-app.vercel.app",
+        "HTTP-Referer": process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://localhost:3000",
         "X-Title": "UK Global Talent Visa Assistant - Chinese",
     }
 });
