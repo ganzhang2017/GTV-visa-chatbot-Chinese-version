@@ -18,5 +18,7 @@
       "source": "/",
       "destination": "/api/index"
     }
-  ]
+  ],
+  "buildCommand": "echo 'No build step required'",
+  "outputDirectory": "."
 }
