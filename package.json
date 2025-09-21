@@ -4,10 +4,22 @@
   "description": "英国全球人才签证助手 - 中文版",
   "main": "index.js",
   "type": "module",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "engines": {
+    "node": "22.x"
   },
-  "keywords": [],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo 'No build step required'",
+    "start": "node api/index.js"
+  },
+  "keywords": [
+    "uk",
+    "visa",
+    "chatbot",
+    "tech-nation",
+    "chinese",
+    "global-talent-visa"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
