@@ -12,14 +12,7 @@
     "build": "echo 'No build step required'",
     "start": "node api/index.js"
   },
-  "keywords": [
-    "uk",
-    "visa",
-    "chatbot",
-    "tech-nation",
-    "chinese",
-    "global-talent-visa"
-  ],
+  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
