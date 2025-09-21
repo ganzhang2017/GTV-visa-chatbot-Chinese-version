@@ -603,3 +603,6 @@ export default function handler(req, res) {
     </script>
 </body>
 </html>`;
+
+    return res.send(html);
+}
