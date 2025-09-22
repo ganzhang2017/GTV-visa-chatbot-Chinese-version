@@ -58,27 +58,55 @@ export default async function handler(req, res) {
             });
         }
 
-        // Simple AI call with timeout protection
-        const completion = await Promise.race([
-            client.chat.completions.create({
-                model: "meta-llama/llama-3.1-8b-instruct:free",
-                messages: [
-                    {
-                        role: "system",
-                        content: "你是英国全球人才签证专家。请用中文简洁地回答问题。"
-                    },
-                    {
-                        role: "user",
-                        content: message
-                    }
-                ],
-                max_tokens: 800,
-                temperature: 0.7,
-            }),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Timeout')), 25000)
-            )
-        ]);
+        // Try multiple working models with timeout protection
+        let completion;
+        const workingModels = [
+            "deepseek/deepseek-chat-v3.1:free",
+            "microsoft/phi-3-medium-128k-instruct:free",
+            "google/gemma-7b-it:free"
+        ];
+
+        for (const model of workingModels) {
+            try {
+                completion = await Promise.race([
+                    client.chat.completions.create({
+                        model: model,
+                        messages: [
+                            {
+                                role: "system",
+                                content: `你是英国全球人才签证专家，专门协助Tech Nation数字技术路线申请。请根据用户的具体问题提供相关的中文回答。
+
+用户问题类型判断：
+- 如果问资格要求，重点说明5年经验、数字技术领域工作、两个路线选择
+- 如果问申请流程，详细说明两阶段流程和具体步骤
+- 如果问文件证据，列出必须文件和4个评估标准的证据类型
+- 如果问时间安排，说明准备阶段、申请处理时间、总体时间线
+- 如果问费用，详细列出所有费用项目和总计
+
+请针对具体问题给出不同的、有针对性的回答。`
+                            },
+                            {
+                                role: "user", 
+                                content: message
+                            }
+                        ],
+                        max_tokens: 800,
+                        temperature: 0.7,
+                    }),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout')), 25000)
+                    )
+                ]);
+                console.log(`成功使用模型: ${model}`);
+                break;
+            } catch (modelError) {
+                console.log(`模型 ${model} 失败:`, modelError.message);
+                if (model === workingModels[workingModels.length - 1]) {
+                    throw modelError; // Last model failed, throw error
+                }
+                continue; // Try next model
+            }
+        }
 
         const response = completion.choices[0]?.message?.content;
         
@@ -101,73 +129,214 @@ export default async function handler(req, res) {
 function getSimpleFallback(message) {
     const query = message.toLowerCase();
     
-    if (query.includes('文件') || query.includes('证据')) {
-        return `**申请文件清单：**
-
-**必须文件：**
-• 护照或身份证
-• 简历（最多3页）
-• 个人陈述（最多1000字）
-• 推荐信3封
-
-**证据材料（最多10项）：**
-• 媒体报道
-• 行业奖项
-• 会议演讲
-• 开源贡献
-• 专利文件
-• 商业成功数据
-
-**下一步：** 选择最强的2个评估标准，收集相关证据。`;
-    }
-    
-    if (query.includes('流程') || query.includes('步骤')) {
-        return `**申请流程：**
-
-**第1步：Tech Nation背书**
-• 费用：£561
-• 时间：8-12周
-• 在线申请
-
-**第2步：内政部签证**
-• 费用：£205
-• 时间：3-8周
-• 生物识别预约
-
-**总费用：** £766 + 医疗附加费
-
-**下一步：** 准备证据材料，获得推荐信。`;
-    }
-    
-    if (query.includes('费用') || query.includes('成本')) {
-        return `**费用明细：**
-
-• Tech Nation费用：£561
-• 签证申请费：£205
-• 医疗附加费：£1,035/年
-
-**总计：** £766 + 医疗费
-
-**家属：** 每人额外£205 + 医疗费
-
-**下一步：** 准备申请预算，考虑加急费用。`;
-    }
-    
-    return `**Tech Nation申请要点：**
+    // 申请资格 - eligibility
+    if (query.includes('申请资格') || query.includes('资格') || query.includes('eligibility')) {
+        return `**英国全球人才签证申请资格：**
 
 **基本要求：**
-• 数字技术领域5年经验
-• 杰出人才或潜力证明
-• 满足2个评估标准
+• **经验要求：** 数字技术领域至少5年工作经验
+• **工作性质：** 必须是在数字技术领域工作，不仅仅是使用技术
+• **年龄要求：** 无年龄限制
+• **教育要求：** 无特定学历要求
 
-**关键步骤：**
-1. 评估资格
-2. 收集证据
-3. 获得推荐信
-4. 提交申请
+**两个申请路线：**
 
-**费用：** £766 + 医疗附加费
-**时间：** 6-8个月
+**1. 杰出人才路线（Exceptional Talent）**
+• 适合已被认可的行业领导者
+• 在过去5年内获得行业认可
+• 处于职业成熟阶段
 
-需要具体指导请告诉我您的问题！`;
+**2. 杰出潜力路线（Exceptional Promise）**
+• 适合有领导潜力的早期职业者
+• 在过去5年内展现出潜力
+• 处于职业早期阶段
+
+**评估标准：**
+• 必须满足所有强制性标准
+• 必须满足4个可选标准中的至少2个
+
+**下一步评估：** 确认您的工作确实在数字技术领域，计算您的相关经验年限。`;
+    }
+    
+    // 时间安排 - timeline
+    if (query.includes('时间安排') || query.includes('时间') || query.includes('多久') || query.includes('timeline')) {
+        return `**英国全球人才签证时间安排：**
+
+**准备阶段：3-6个月**
+• **材料收集：** 2-4个月
+  - 整理工作成就和证据
+  - 收集媒体报道、奖项等
+• **推荐信：** 1-2个月
+  - 联系推荐人
+  - 等待推荐信撰写
+• **文档撰写：** 2-4周
+  - 个人陈述
+  - 简历整理
+
+**官方处理时间：**
+
+**第一阶段 - Tech Nation背书：**
+• **标准处理：** 8-12周
+• **加急处理：** 3-5周（额外£500-1500）
+
+**第二阶段 - 内政部签证：**
+• **英国境外：** 3周
+• **英国境内：** 8周
+
+**总体时间规划：**
+• **最快情况：** 4-5个月（准备3个月 + 加急处理）
+• **标准情况：** 7-9个月
+• **保守估计：** 10-12个月
+
+**建议提前规划：** 如果有具体的英国入境时间需求，建议提前12个月开始准备。`;
+    }
+    
+    // 文件证据 - documents
+    if (query.includes('文件') || query.includes('证据') || query.includes('documents') || query.includes('evidence')) {
+        return `**申请文件和证据清单：**
+
+**强制性文件（所有人必须提供）：**
+1. **护照或身份证**
+2. **简历（最多3页）**
+   • 重点突出数字技术成就
+3. **个人陈述（最多1000字）**
+   • 解释如何满足标准
+   • 在英国的计划
+4. **推荐信3封**
+   • 来自数字技术领域知名人士
+   • 专门为此申请撰写
+
+**证据组合（最多10项，需满足至少2个标准）：**
+
+**标准1 - 行业认可：**
+• 主流媒体报道
+• 行业会议演讲邀请
+• 专业奖项和荣誉
+• 专家委员会职位
+
+**标准2 - 技术专长：**
+• 开源项目贡献统计
+• 技术论文发表
+• 专利申请
+• 同行技术认可
+
+**标准3 - 学术/商业成功：**
+• 学术研究和引用
+• 产品成功发布数据
+• 收入增长证明
+• 重要商业合作
+
+**标准4 - 技术创新：**
+• 新技术开发
+• 创新解决方案
+• 行业变革领导
+• 技术突破成果
+
+**证据质量要求：** 外部认可 > 内部认可，量化数据 > 定性描述`;
+    }
+    
+    // 申请流程 - process
+    if (query.includes('流程') || query.includes('步骤') || query.includes('process') || query.includes('如何')) {
+        return `**Tech Nation申请流程详解：**
+
+**两阶段申请流程：**
+
+**第一阶段：Tech Nation背书申请**
+• **申请对象：** Tech Nation（独立机构）
+• **费用：** £561
+• **处理时间：** 8-12周
+• **申请方式：** 在线门户提交
+• **材料：** 全部证据和文件
+
+**第二阶段：内政部签证申请**
+• **申请对象：** 英国内政部
+• **费用：** £205 + 医疗附加费
+• **处理时间：** 3-8周
+• **申请时机：** 获得背书后立即申请
+• **额外要求：** 生物识别预约
+
+**具体操作步骤：**
+
+1. **准备材料（2-6个月）**
+   • 收集所有证据文件
+   • 撰写个人陈述
+   • 获得推荐信
+
+2. **在线申请Tech Nation**
+   • 填写申请表格
+   • 上传所有文件
+   • 支付£561费用
+
+3. **等待背书决定（8-12周）**
+
+4. **申请内政部签证**
+   • 在线申请
+   • 支付费用和医疗附加费
+   • 预约生物识别
+
+5. **获得签证（3-8周）**
+
+**重要提醒：** 必须先获得Tech Nation背书才能申请签证，两个步骤不能同时进行。`;
+    }
+    
+    // 费用 - costs
+    if (query.includes('费用') || query.includes('成本') || query.includes('cost') || query.includes('fee')) {
+        return `**英国全球人才签证费用详细清单：**
+
+**主申请人费用：**
+• **Tech Nation背书：** £561
+• **内政部签证申请：** £205
+• **医疗附加费（5年）：** £5,175（£1,035/年）
+• **主申请人总计：** £5,941
+
+**家属费用（每人）：**
+• **签证申请费：** £205
+• **医疗附加费（5年）：** £5,175
+• **每位家属：** £5,380
+
+**可选加急费用：**
+• **Tech Nation加急：** £500-£1,500
+• **内政部加急：** £500-£800
+• **生物识别费：** 因地区而异
+
+**分期付款时间点：**
+1. **申请Tech Nation时：** £561
+2. **申请签证时：** £205 + £5,175医疗费
+3. **如有家属：** 每人额外£5,380
+
+**费用节省建议：**
+• 选择标准处理时间
+• 确保材料完整避免重申
+• 合理规划避免加急费用
+
+**5年总投资：** 单人£5,941，夫妻约£11,321，三口之家约£16,701`;
+    }
+    
+    // Default response
+    return `**英国全球人才签证核心信息：**
+
+**申请概要：**
+• 数字技术领域专业签证
+• 无需雇主担保
+• 5年有效期，可延期
+• 3-5年后可申请永居
+
+**基本要求：**
+• 5年以上相关经验
+• 证明杰出才能或潜力
+• 满足评估标准
+
+**申请流程：**
+1. Tech Nation背书（£561，8-12周）
+2. 内政部签证（£205，3-8周）
+
+**总费用：** £766 + £5,175医疗附加费
+
+**关键成功因素：**
+• 外部认可的证据
+• 量化的成就数据
+• 高质量推荐信
+• 清晰的个人陈述
+
+请告诉我您想了解的具体方面，我可以提供更详细的指导！`;
 }
