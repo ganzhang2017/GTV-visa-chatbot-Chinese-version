@@ -2,15 +2,22 @@
 import { OpenAI } from 'openai';
 import { getNotionPageContent } from './guide_content.js';
 
-// Initialize OpenRouter client with proper API key
-const openai = new OpenAI({
-    apiKey: process.env.OPENROUTER_API_KEY, // Using your existing OPENROUTER_API_KEY
-    baseURL: "https://openrouter.ai/api/v1",
-    defaultHeaders: {
-        "HTTP-Referer": process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://localhost:3000",
-        "X-Title": "UK Global Talent Visa Assistant - Chinese",
+// Initialize OpenRouter client only when we have the API key
+let openai = null;
+
+function getOpenAIClient() {
+    if (!openai && process.env.OPENROUTER_API_KEY) {
+        openai = new OpenAI({
+            apiKey: process.env.OPENROUTER_API_KEY,
+            baseURL: "https://openrouter.ai/api/v1",
+            defaultHeaders: {
+                "HTTP-Referer": process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://localhost:3000",
+                "X-Title": "UK Global Talent Visa Assistant - Chinese",
+            }
+        });
     }
-});
+    return openai;
+}
 
 // Enhanced semantic search
 function findRelevantSections(content, query, maxSections = 4) {
@@ -78,6 +85,15 @@ function findRelevantSections(content, query, maxSections = 4) {
 // Generate response using OpenRouter with Chinese-optimized model
 async function generateAIResponse(context, userMessage, resumeContent = null) {
     try {
+        // Check API key first
+        if (!process.env.OPENROUTER_API_KEY) {
+            throw new Error('OPENROUTER_API_KEY environment variable is missing');
+        }
+
+        const client = getOpenAIClient();
+        if (!client) {
+            throw new Error('Failed to initialize OpenAI client');
+        }
         let systemPrompt = `你是英国全球人才签证专家，专门从事通过Tech Nation的数字技术路径申请。
 
 回复格式要求：
@@ -121,7 +137,7 @@ ${resumeContent}
         console.log('发送请求到OpenRouter（中文）...');
         
         // Using a better model for Chinese - Qwen is excellent for Chinese
-        const completion = await openai.chat.completions.create({
+        const completion = await client.chat.completions.create({
             model: "qwen/qwen-2-72b-instruct", // Excellent free Chinese model
             messages: messages,
             max_tokens: 1500,
@@ -144,7 +160,8 @@ ${resumeContent}
         if (error.status === 429 || error.message.includes('rate limit')) {
             try {
                 console.log('尝试备用中文模型...');
-                const completion = await openai.chat.completions.create({
+                const client = getOpenAIClient();
+                const completion = await client.chat.completions.create({
                     model: "meta-llama/llama-3.1-8b-instruct:free", // Free alternative
                     messages: messages,
                     max_tokens: 1500,
