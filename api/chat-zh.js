@@ -1,10 +1,10 @@
-// api/chat-zh.js - Chinese Chat API
+// api/chat-zh.js - Fixed Chinese Chat API
 import { OpenAI } from 'openai';
 import { getNotionPageContent } from './guide_content.js';
 
-// Initialize OpenRouter client
+// Initialize OpenRouter client with proper API key
 const openai = new OpenAI({
-    apiKey: process.env.OPENROUTER_API_KEY,
+    apiKey: process.env.OPENROUTER_API_KEY, // Using your existing OPENROUTER_API_KEY
     baseURL: "https://openrouter.ai/api/v1",
     defaultHeaders: {
         "HTTP-Referer": process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://localhost:3000",
@@ -75,7 +75,7 @@ function findRelevantSections(content, query, maxSections = 4) {
     return relevantSections.join('\n\n---\n\n');
 }
 
-// Generate response using OpenAI in Chinese
+// Generate response using OpenRouter with Chinese-optimized model
 async function generateAIResponse(context, userMessage, resumeContent = null) {
     try {
         let systemPrompt = `你是英国全球人才签证专家，专门从事通过Tech Nation的数字技术路径申请。
@@ -120,8 +120,9 @@ ${resumeContent}
 
         console.log('发送请求到OpenRouter（中文）...');
         
+        // Using a better model for Chinese - Qwen is excellent for Chinese
         const completion = await openai.chat.completions.create({
-            model: "openai/gpt-oss-120b",
+            model: "qwen/qwen-2-72b-instruct", // Excellent free Chinese model
             messages: messages,
             max_tokens: 1500,
             temperature: 0.7,
@@ -138,6 +139,27 @@ ${resumeContent}
 
     } catch (error) {
         console.error('OpenRouter API错误（中文）:', error);
+        
+        // Try alternative free Chinese models if the primary fails
+        if (error.status === 429 || error.message.includes('rate limit')) {
+            try {
+                console.log('尝试备用中文模型...');
+                const completion = await openai.chat.completions.create({
+                    model: "meta-llama/llama-3.1-8b-instruct:free", // Free alternative
+                    messages: messages,
+                    max_tokens: 1500,
+                    temperature: 0.7,
+                });
+                
+                const response = completion.choices[0]?.message?.content;
+                if (response) {
+                    console.log('备用模型成功回复');
+                    return response;
+                }
+            } catch (backupError) {
+                console.error('备用模型也失败:', backupError);
+            }
+        }
         
         if (error.status === 402 || error.message.includes('credits') || error.message.includes('insufficient_quota')) {
             return '很抱歉，由于API限制，我目前无法访问我的AI功能。请稍后再试，或访问官方Tech Nation网站获取指导。';
@@ -241,6 +263,15 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'No message provided' });
         }
 
+        // API key check
+        if (!process.env.OPENROUTER_API_KEY) {
+            console.error('OPENROUTER_API_KEY environment variable is missing');
+            return res.status(500).json({ 
+                error: 'API配置错误。请检查环境变量设置。',
+                response: getIntelligentFallback(message, '')
+            });
+        }
+
         if (message === 'test connection') {
             return res.status(200).json({ 
                 response: '中文API连接成功！🇨🇳 使用OpenRouter AI驱动的回复。' 
@@ -272,7 +303,8 @@ export default async function handler(req, res) {
     } catch (error) {
         console.error('中文聊天API错误:', error);
         return res.status(500).json({ 
-            error: '我遇到了意外错误。请重试，如果问题持续存在，请访问官方Tech Nation网站获取指导。'
+            error: '我遇到了意外错误。请重试，如果问题持续存在，请访问官方Tech Nation网站获取指导。',
+            response: getIntelligentFallback(req.body?.message || '', '')
         });
     }
 }
