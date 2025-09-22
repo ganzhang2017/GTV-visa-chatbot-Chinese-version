@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { message } = req.body;
+        const { message, resumeContent } = req.body;
 
         if (!message) {
             return res.status(400).json({ error: 'No message provided' });
@@ -44,7 +44,21 @@ export default async function handler(req, res) {
             });
         }
 
-        // Check for API key
+        // Check if this is one of the 4 guided questions - return prepared answers immediately
+        const guidedQuestions = [
+            '数字技术路线的申请资格要求是什么？',
+            'Tech Nation申请流程如何运作？请包括所有费用。', 
+            '我需要准备什么文件和证据？',
+            '整个过程需要多长时间？'
+        ];
+
+        if (guidedQuestions.includes(message)) {
+            return res.status(200).json({ 
+                response: getPreparedAnswer(message)
+            });
+        }
+
+        // For free-form questions, try AI with working models
         if (!process.env.OPENROUTER_API_KEY) {
             return res.status(200).json({ 
                 response: getSimpleFallback(message)
@@ -58,43 +72,40 @@ export default async function handler(req, res) {
             });
         }
 
-        // Try multiple working models with timeout protection
+        // Try multiple working models with shorter timeout for better UX
         let completion;
         const workingModels = [
-            "deepseek/deepseek-chat-v3.1:free",
-            "microsoft/phi-3-medium-128k-instruct:free",
-            "google/gemma-7b-it:free"
+            "x-ai/grok-4-fast:free",
+            "google/gemini-2.0-flash-exp:free", 
+            "deepseek/deepseek-chat-v3.1:free"
         ];
 
         for (const model of workingModels) {
             try {
+                let systemPrompt = `你是英国全球人才签证专家，专门协助Tech Nation数字技术路线申请。请用中文回答，提供具体可行的建议。`;
+                
+                if (resumeContent) {
+                    systemPrompt += `\n\n用户已提供简历信息：${resumeContent.substring(0, 1000)}...\n\n请基于用户的具体背景提供个性化建议，包括：\n1. 根据他们的经验判断适合哪个路线（杰出人才vs杰出潜力）\n2. 基于他们的背景推荐最强的2个评估标准\n3. 针对他们的具体情况建议需要加强的领域\n4. 具体的下一步行动建议`;
+                }
+
                 completion = await Promise.race([
                     client.chat.completions.create({
                         model: model,
                         messages: [
                             {
                                 role: "system",
-                                content: `你是英国全球人才签证专家，专门协助Tech Nation数字技术路线申请。请根据用户的具体问题提供相关的中文回答。
-
-用户问题类型判断：
-- 如果问资格要求，重点说明5年经验、数字技术领域工作、两个路线选择
-- 如果问申请流程，详细说明两阶段流程和具体步骤
-- 如果问文件证据，列出必须文件和4个评估标准的证据类型
-- 如果问时间安排，说明准备阶段、申请处理时间、总体时间线
-- 如果问费用，详细列出所有费用项目和总计
-
-请针对具体问题给出不同的、有针对性的回答。`
+                                content: systemPrompt
                             },
                             {
                                 role: "user", 
                                 content: message
                             }
                         ],
-                        max_tokens: 800,
+                        max_tokens: 1000,
                         temperature: 0.7,
                     }),
                     new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout')), 25000)
+                        setTimeout(() => reject(new Error('Timeout')), 15000) // Shorter timeout
                     )
                 ]);
                 console.log(`成功使用模型: ${model}`);
@@ -102,9 +113,9 @@ export default async function handler(req, res) {
             } catch (modelError) {
                 console.log(`模型 ${model} 失败:`, modelError.message);
                 if (model === workingModels[workingModels.length - 1]) {
-                    throw modelError; // Last model failed, throw error
+                    throw modelError;
                 }
-                continue; // Try next model
+                continue;
             }
         }
 
@@ -126,6 +137,7 @@ export default async function handler(req, res) {
     }
 }
 
+// Fallback for non-guided questions
 function getSimpleFallback(message) {
     const query = message.toLowerCase();
     
