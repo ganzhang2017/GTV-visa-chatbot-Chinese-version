@@ -12,7 +12,11 @@ function getClient() {
             defaultHeaders: {
                 "HTTP-Referer": "https://localhost:3000",
                 "X-Title": "UK Global Talent Visa Assistant - Chinese",
-            }
+            } else {
+            return res.status(200).json({ 
+                response: getSimpleFallback(message)
+            });
+        }
         });
     }
     return openai;
@@ -58,7 +62,24 @@ export default async function handler(req, res) {
             });
         }
 
-        // For free-form questions, try AI with working models
+        // Check if this is a follow-up question about their analysis
+        const analysisFollowUps = [
+            '基于我的简历',
+            '根据我的背景',
+            '我的情况',
+            '针对我的',
+            '我应该',
+            '建议我',
+            '我需要',
+            '我的申请'
+        ];
+
+        const isFollowUp = resumeContent && analysisFollowUps.some(phrase => 
+            message.toLowerCase().includes(phrase)
+        );
+
+        // For follow-up questions, always try AI even if it's a guided question
+        if (isFollowUp || (!guidedQuestions.includes(message) && message.length > 20)) {
         if (!process.env.OPENROUTER_API_KEY) {
             return res.status(200).json({ 
                 response: getSimpleFallback(message)
@@ -85,7 +106,7 @@ export default async function handler(req, res) {
                 let systemPrompt = `你是英国全球人才签证专家，专门协助Tech Nation数字技术路线申请。请用中文回答，提供具体可行的建议。`;
                 
                 if (resumeContent) {
-                    systemPrompt += `\n\n用户已提供简历信息：${resumeContent.substring(0, 1000)}...\n\n请基于用户的具体背景提供个性化建议，包括：\n1. 根据他们的经验判断适合哪个路线（杰出人才vs杰出潜力）\n2. 基于他们的背景推荐最强的2个评估标准\n3. 针对他们的具体情况建议需要加强的领域\n4. 具体的下一步行动建议`;
+                    systemPrompt += `\n\n用户已提供简历信息：${resumeContent.substring(0, 1500)}...\n\n请基于用户的具体背景提供个性化建议。要求：\n\n1. 必须明确提及用户的当前或最近职位和公司\n2. 根据他们的具体经验判断适合哪个路线（杰出人才vs杰出潜力）\n3. 基于他们的背景推荐最强的2个评估标准\n4. 针对他们的具体情况建议需要加强的领域\n5. 具体的下一步行动建议（限制在3个最重要的行动）\n\n回复格式要求：\n- 使用简洁清晰的格式，避免过多粗体标记\n- 用 • 作为项目符号\n- 用数字列表表示步骤\n- 保持段落简短易读\n\n如果无法从简历中提取到明确的职位信息，请说明需要更清晰的简历内容。`;
                 }
 
                 completion = await Promise.race([
