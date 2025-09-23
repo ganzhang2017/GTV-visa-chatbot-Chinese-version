@@ -1,4 +1,4 @@
-// api/index.js - Updated with real PDF parsing
+// api/index.js - Fixed version with proper syntax
 export default function handler(req, res) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     
@@ -579,8 +579,8 @@ export default function handler(req, res) {
                             }
                             
                             // Clean up extracted text
-                            text = text.replace(/[^\x20-\x7E\u4e00-\u9fff]/g, ' ')
-                                      .replace(/\s+/g, ' ')
+                            text = text.replace(/[^\\x20-\\x7E\\u4e00-\\u9fff]/g, ' ')
+                                      .replace(/\\s+/g, ' ')
                                       .trim();
                             
                             if (text.length > 50) {
