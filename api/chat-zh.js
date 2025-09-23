@@ -1,4 +1,4 @@
-// api/chat-zh.js - Safe restoration with minimal improvements
+// api/chat-zh.js - With diagnostic logging added
 import { OpenAI } from 'openai';
 
 // Simple OpenRouter client initialization
@@ -72,6 +72,18 @@ export default async function handler(req, res) {
             });
         }
 
+        // ===== DIAGNOSTIC LOGGING ADDED HERE =====
+        console.log('=== DIAGNOSTIC INFO ===');
+        console.log('Message:', message.substring(0, 100));
+        console.log('Has resumeContent:', !!resumeContent);
+        console.log('Resume content length:', resumeContent ? resumeContent.length : 0);
+        if (resumeContent) {
+            console.log('Resume content first 300 chars:', resumeContent.substring(0, 300));
+            console.log('Resume content last 300 chars:', resumeContent.substring(resumeContent.length - 300));
+        }
+        console.log('=== END DIAGNOSTIC ===');
+        // ===== END DIAGNOSTIC LOGGING =====
+
         // Try working models
         let completion;
         const workingModels = [
@@ -85,7 +97,16 @@ export default async function handler(req, res) {
                 let systemPrompt = `你是英国全球人才签证专家，专门协助Tech Nation数字技术路线申请。请用中文回答，提供具体可行的建议。`;
                 
                 if (resumeContent) {
-                    systemPrompt += `\n\n用户已提供简历信息：${resumeContent.substring(0, 1500)}\n\n请基于用户的具体背景提供个性化建议。要求：\n1. 必须明确提及用户的当前或最近职位\n2. 根据经验判断适合哪个路线\n3. 推荐最强的2个评估标准\n4. 提供3个最重要的下一步行动\n\n格式要求：使用简洁清晰的格式，用 • 作为项目符号，避免过多粗体。`;
+                    const resumeExcerpt = resumeContent.substring(0, 1500);
+                    
+                    // ===== DIAGNOSTIC LOGGING ADDED HERE =====
+                    console.log('=== RESUME ANALYSIS DIAGNOSTIC ===');
+                    console.log('Resume excerpt being sent to AI (length:', resumeExcerpt.length, ')');
+                    console.log('Resume excerpt content:', resumeExcerpt);
+                    console.log('=== END RESUME DIAGNOSTIC ===');
+                    // ===== END DIAGNOSTIC LOGGING =====
+                    
+                    systemPrompt += `\n\n用户已提供简历信息：${resumeExcerpt}\n\n请基于用户的具体背景提供个性化建议。要求：\n1. 必须明确提及用户的当前或最近职位\n2. 根据经验判断适合哪个路线\n3. 推荐最强的2个评估标准\n4. 提供3个最重要的下一步行动\n\n格式要求：使用简洁清晰的格式，用 • 作为项目符号，避免过多粗体。`;
                 }
 
                 completion = await Promise.race([
@@ -109,6 +130,17 @@ export default async function handler(req, res) {
                     )
                 ]);
                 console.log(`成功使用模型: ${model}`);
+                
+                // ===== DIAGNOSTIC LOGGING ADDED HERE =====
+                const aiResponse = completion.choices[0]?.message?.content;
+                if (aiResponse && resumeContent) {
+                    console.log('=== AI RESPONSE DIAGNOSTIC ===');
+                    console.log('AI response length:', aiResponse.length);
+                    console.log('AI response first 500 chars:', aiResponse.substring(0, 500));
+                    console.log('=== END AI RESPONSE DIAGNOSTIC ===');
+                }
+                // ===== END DIAGNOSTIC LOGGING =====
+                
                 break;
             } catch (modelError) {
                 console.log(`模型 ${model} 失败:`, modelError.message);
