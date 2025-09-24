@@ -1,4 +1,4 @@
-// api/index.js - Fixed version with proper syntax
+// api/index.js - Complete working version
 export default function handler(req, res) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     
@@ -9,10 +9,8 @@ export default function handler(req, res) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>英国全球人才签证助手 - 中文版</title>
     
-    <!-- Add PDF.js library for better PDF parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        // Configure PDF.js worker
         if (window.pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
@@ -20,7 +18,7 @@ export default function handler(req, res) {
     
     <style>
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0; 
             padding: 10px;
@@ -286,69 +284,72 @@ export default function handler(req, res) {
             init() {
                 console.log('🤖 启动中文指导工作流程...');
                 
-                this.sendBtn.addEventListener('click', () => this.handleSend());
-                this.messageInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter' && !this.isLoading) this.handleSend();
+                var self = this;
+                this.sendBtn.addEventListener('click', function() { self.handleSend(); });
+                this.messageInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !self.isLoading) self.handleSend();
                 });
-                this.uploadBtn.addEventListener('click', () => this.fileInput.click());
-                this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+                this.uploadBtn.addEventListener('click', function() { self.fileInput.click(); });
+                this.fileInput.addEventListener('change', function(e) { self.handleFileUpload(e); });
                 
                 this.startWorkflow();
             }
             
             startWorkflow() {
+                var self = this;
                 this.addMessage('👋 欢迎！我将指导您完成英国全球人才签证数字技术路线的申请。', 'bot');
                 
-                setTimeout(() => {
-                    this.addMessage('ℹ️ **关于英国全球人才签证：** 此签证让数字技术领域的高技能人才无需雇主担保即可在英国生活和工作，同时给予其家属完全的工作和学习权利。**免责声明：** 这是一般性指导，非法律建议。', 'bot');
+                setTimeout(function() {
+                    self.addMessage('ℹ️ **关于英国全球人才签证：** 此签证让数字技术领域的高技能人才无需雇主担保即可在英国生活和工作，同时给予其家属完全的工作和学习权利。**免责声明：** 这是一般性指导，非法律建议。', 'bot');
                 }, 1000);
                 
-                setTimeout(() => {
-                    this.addMessage('让我们从一些快速主题开始。您首先想了解什么？', 'bot');
-                    this.showInitialOptions();
+                setTimeout(function() {
+                    self.addMessage('让我们从一些快速主题开始。您首先想了解什么？', 'bot');
+                    self.showInitialOptions();
                 }, 2000);
             }
             
             showInitialOptions() {
-                const buttonsHtml = '<div class="button-group">' +
-                    '<button class="guide-button" onclick="bot.handleTopicChoice(\\'eligibility\\')">📋 申请资格</button>' +
-                    '<button class="guide-button" onclick="bot.handleTopicChoice(\\'process\\')">🚀 申请流程</button>' +
-                    '<button class="guide-button" onclick="bot.handleTopicChoice(\\'documents\\')">📄 申请文件</button>' +
-                    '<button class="guide-button" onclick="bot.handleTopicChoice(\\'timeline\\')">⏰ 时间安排</button>' +
-                    '<button class="workflow-button" onclick="bot.startAssessment()">✨ 开始评估</button>' +
+                var buttonsHtml = '<div class="button-group">' +
+                    '<button class="guide-button" onclick="window.bot.handleTopicChoice(\'eligibility\')">📋 申请资格</button>' +
+                    '<button class="guide-button" onclick="window.bot.handleTopicChoice(\'process\')">🚀 申请流程</button>' +
+                    '<button class="guide-button" onclick="window.bot.handleTopicChoice(\'documents\')">📄 申请文件</button>' +
+                    '<button class="guide-button" onclick="window.bot.handleTopicChoice(\'timeline\')">⏰ 时间安排</button>' +
+                    '<button class="workflow-button" onclick="window.bot.startAssessment()">✨ 开始评估</button>' +
                     '</div>';
                 
-                const buttonMessage = document.createElement('div');
+                var buttonMessage = document.createElement('div');
                 buttonMessage.className = 'message bot-message';
                 buttonMessage.innerHTML = buttonsHtml;
                 this.chat.appendChild(buttonMessage);
                 this.scrollToBottom();
             }
             
-            async handleTopicChoice(topic) {
-                const topicQuestions = {
+            handleTopicChoice(topic) {
+                var topicQuestions = {
                     'eligibility': '数字技术路线的申请资格要求是什么？',
                     'process': 'Tech Nation申请流程如何运作？请包括所有费用。',
                     'documents': '我需要准备什么文件和证据？',
                     'timeline': '整个过程需要多长时间？'
                 };
                 
-                const question = topicQuestions[topic];
+                var question = topicQuestions[topic];
                 this.addMessage(question, 'user');
-                await this.sendToAPI(question);
+                this.sendToAPI(question);
                 
-                setTimeout(() => {
-                    this.addMessage('您想要对您的个人档案进行个性化评估吗？', 'bot');
-                    const buttonHtml = '<div class="button-group">' +
-                        '<button class="workflow-button" onclick="bot.startAssessment()">是的，评估我的档案</button>' +
-                        '<button class="guide-button" onclick="bot.showInitialOptions()">询问其他问题</button>' +
+                var self = this;
+                setTimeout(function() {
+                    self.addMessage('您想要对您的个人档案进行个性化评估吗？', 'bot');
+                    var buttonHtml = '<div class="button-group">' +
+                        '<button class="workflow-button" onclick="window.bot.startAssessment()">是的，评估我的档案</button>' +
+                        '<button class="guide-button" onclick="window.bot.showInitialOptions()">询问其他问题</button>' +
                         '</div>';
                     
-                    const buttonMessage = document.createElement('div');
+                    var buttonMessage = document.createElement('div');
                     buttonMessage.className = 'message bot-message';
                     buttonMessage.innerHTML = buttonHtml;
-                    this.chat.appendChild(buttonMessage);
-                    this.scrollToBottom();
+                    self.chat.appendChild(buttonMessage);
+                    self.scrollToBottom();
                 }, 2000);
             }
             
@@ -357,21 +358,22 @@ export default function handler(req, res) {
                 this.addProgressIndicator('步骤 1/5: 经验');
                 this.addMessage('让我们评估您的Tech Nation申请档案！🎯', 'bot');
                 
-                setTimeout(() => {
-                    this.addMessage('您在数字技术领域有多少年经验？', 'bot');
-                    this.showExperienceOptions();
+                var self = this;
+                setTimeout(function() {
+                    self.addMessage('您在数字技术领域有多少年经验？', 'bot');
+                    self.showExperienceOptions();
                 }, 1000);
             }
             
             showExperienceOptions() {
-                const buttonsHtml = '<div class="button-group">' +
-                    '<button class="workflow-button" onclick="bot.selectExperience(\\'0-2\\')">0-2年</button>' +
-                    '<button class="workflow-button" onclick="bot.selectExperience(\\'3-5\\')">3-5年</button>' +
-                    '<button class="workflow-button" onclick="bot.selectExperience(\\'6-10\\')">6-10年</button>' +
-                    '<button class="workflow-button" onclick="bot.selectExperience(\\'10+\\')">10年以上</button>' +
+                var buttonsHtml = '<div class="button-group">' +
+                    '<button class="workflow-button" onclick="window.bot.selectExperience(\'0-2\')">0-2年</button>' +
+                    '<button class="workflow-button" onclick="window.bot.selectExperience(\'3-5\')">3-5年</button>' +
+                    '<button class="workflow-button" onclick="window.bot.selectExperience(\'6-10\')">6-10年</button>' +
+                    '<button class="workflow-button" onclick="window.bot.selectExperience(\'10+\')">10年以上</button>' +
                     '</div>';
                 
-                const buttonMessage = document.createElement('div');
+                var buttonMessage = document.createElement('div');
                 buttonMessage.className = 'message bot-message';
                 buttonMessage.innerHTML = buttonsHtml;
                 this.chat.appendChild(buttonMessage);
@@ -385,19 +387,20 @@ export default function handler(req, res) {
                 this.currentStep = 'role';
                 this.addProgressIndicator('步骤 2/5: 角色');
                 
-                setTimeout(() => {
-                    this.addMessage('您在数字技术领域的主要角色是什么？', 'bot');
-                    this.showRoleOptions();
+                var self = this;
+                setTimeout(function() {
+                    self.addMessage('您在数字技术领域的主要角色是什么？', 'bot');
+                    self.showRoleOptions();
                 }, 1000);
             }
             
             showRoleOptions() {
-                const buttonsHtml = '<div class="button-group">' +
-                    '<button class="workflow-button" onclick="bot.selectRole(\\'technical\\')">👩‍💻 技术</button>' +
-                    '<button class="workflow-button" onclick="bot.selectRole(\\'business\\')">💼 商务</button>' +
+                var buttonsHtml = '<div class="button-group">' +
+                    '<button class="workflow-button" onclick="window.bot.selectRole(\'technical\')">👩‍💻 技术</button>' +
+                    '<button class="workflow-button" onclick="window.bot.selectRole(\'business\')">💼 商务</button>' +
                     '</div>';
                 
-                const buttonMessage = document.createElement('div');
+                var buttonMessage = document.createElement('div');
                 buttonMessage.className = 'message bot-message';
                 buttonMessage.innerHTML = buttonsHtml;
                 this.chat.appendChild(buttonMessage);
@@ -411,9 +414,10 @@ export default function handler(req, res) {
                 this.currentStep = 'resume';
                 this.addProgressIndicator('步骤 3/5: 简历上传');
                 
-                setTimeout(() => {
-                    this.addMessage('为了给您个性化指导，请上传您的简历（PDF格式）。这将帮助我了解您的背景。', 'bot');
-                    this.enableResumeUpload();
+                var self = this;
+                setTimeout(function() {
+                    self.addMessage('为了给您个性化指导，请上传您的简历（PDF格式）。这将帮助我了解您的背景。', 'bot');
+                    self.enableResumeUpload();
                 }, 1000);
             }
             
@@ -421,11 +425,11 @@ export default function handler(req, res) {
                 this.uploadBtn.style.display = 'block';
                 this.addMessage('准备好后点击下方的"上传简历"按钮。没有准备好简历？您可以跳过此步骤。', 'bot');
                 
-                const buttonHtml = '<div class="button-group">' +
-                    '<button class="workflow-button" onclick="bot.skipResume()">跳过简历上传</button>' +
+                var buttonHtml = '<div class="button-group">' +
+                    '<button class="workflow-button" onclick="window.bot.skipResume()">跳过简历上传</button>' +
                     '</div>';
                 
-                const buttonMessage = document.createElement('div');
+                var buttonMessage = document.createElement('div');
                 buttonMessage.className = 'message bot-message';
                 buttonMessage.innerHTML = buttonHtml;
                 this.chat.appendChild(buttonMessage);
@@ -436,8 +440,8 @@ export default function handler(req, res) {
                 this.generateFeedback();
             }
             
-            async handleFileUpload(e) {
-                const file = e.target.files[0];
+            handleFileUpload(e) {
+                var file = e.target.files[0];
                 if (!file) return;
 
                 if (file.type !== 'application/pdf') {
@@ -453,151 +457,122 @@ export default function handler(req, res) {
                 this.uploadStatus.textContent = '📤 处理中...';
                 this.addMessage('已上传简历：' + file.name, 'user');
 
-                try {
-                    // Try backend processing first (most reliable)
-                    const backendResult = await this.uploadToBackend(file);
+                var self = this;
+                this.uploadToBackend(file).then(function(backendResult) {
                     if (backendResult.success && backendResult.textExtracted) {
-                        this.resumeContent = backendResult.extractedText || backendResult.preview?.replace('...', '');
-                        this.uploadStatus.textContent = '✅ 简历处理完成（后端解析）';
-                        this.addMessage('✅ 简历处理成功！现在我可以为您提供个性化建议了。', 'bot');
+                        self.resumeContent = backendResult.extractedText || backendResult.preview?.replace('...', '');
+                        self.uploadStatus.textContent = '✅ 简历处理完成（后端解析）';
+                        self.addMessage('✅ 简历处理成功！现在我可以为您提供个性化建议了。', 'bot');
                         
-                        setTimeout(() => {
-                            this.generateFeedback();
+                        setTimeout(function() {
+                            self.generateFeedback();
                         }, 1500);
                         return;
                     }
 
-                    // Fallback to frontend parsing if backend fails
                     console.log('后端处理失败，尝试前端解析...');
-                    const frontendText = await this.extractTextFromPDF(file);
+                    return self.extractTextFromPDF(file);
+                }).then(function(frontendText) {
                     if (frontendText && frontendText.length > 200) {
-                        this.resumeContent = frontendText;
-                        this.uploadStatus.textContent = '✅ 简历处理完成（前端解析）';
-                        this.addMessage('✅ 简历处理成功！现在我可以为您提供个性化建议了。', 'bot');
+                        self.resumeContent = frontendText;
+                        self.uploadStatus.textContent = '✅ 简历处理完成（前端解析）';
+                        self.addMessage('✅ 简历处理成功！现在我可以为您提供个性化建议了。', 'bot');
                         
-                        setTimeout(() => {
-                            this.generateFeedback();
+                        setTimeout(function() {
+                            self.generateFeedback();
                         }, 1500);
                         return;
                     }
-
                     throw new Error('无法提取有效文本内容');
-
-                } catch (error) {
+                }).catch(function(error) {
                     console.error('PDF处理错误:', error);
-                    this.uploadStatus.textContent = '⚠️ 处理失败，继续...';
-                    this.addMessage('我无法读取您的PDF文件，但仍可以提供一般指导。让我们继续！', 'bot');
+                    self.uploadStatus.textContent = '⚠️ 处理失败，继续...';
+                    self.addMessage('我无法读取您的PDF文件，但仍可以提供一般指导。让我们继续！', 'bot');
                     
-                    setTimeout(() => {
-                        this.generateFeedback();
+                    setTimeout(function() {
+                        self.generateFeedback();
                     }, 1500);
-                }
+                });
             }
 
-            // New backend upload function
-            async uploadToBackend(file) {
-                try {
-                    const formData = new FormData();
-                    formData.append('resume', file);
-                    formData.append('userId', this.getUserId());
+            uploadToBackend(file) {
+                var formData = new FormData();
+                formData.append('resume', file);
+                formData.append('userId', this.getUserId());
 
-                    const response = await fetch('/api/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-
+                return fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                }).then(function(response) {
                     if (!response.ok) {
-                        throw new Error(\`Backend upload failed: \${response.status}\`);
+                        throw new Error('Backend upload failed: ' + response.status);
                     }
-
-                    const result = await response.json();
+                    return response.json();
+                }).then(function(result) {
                     console.log('Backend upload result:', result);
-                    
                     return {
                         success: result.success,
                         textExtracted: result.textExtracted,
                         extractedText: result.extractedText,
                         preview: result.preview
                     };
-                } catch (error) {
+                }).catch(function(error) {
                     console.error('Backend upload error:', error);
                     return { success: false };
-                }
+                });
             }
 
-            // Improved frontend PDF parsing with real text extraction
-            async extractTextFromPDF(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
+            extractTextFromPDF(file) {
+                var self = this;
+                return new Promise(function(resolve, reject) {
+                    var reader = new FileReader();
                     
-                    reader.onload = async function(e) {
+                    reader.onload = function(e) {
                         try {
-                            const arrayBuffer = e.target.result;
+                            var arrayBuffer = e.target.result;
                             
-                            // Try using PDF.js for text extraction
                             if (window.pdfjsLib) {
-                                try {
-                                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                                    let fullText = '';
+                                pdfjsLib.getDocument({ data: arrayBuffer }).promise.then(function(pdf) {
+                                    var fullText = '';
+                                    var maxPages = Math.min(pdf.numPages, 5);
+                                    var promises = [];
                                     
-                                    // Extract text from all pages (max 5 pages to avoid timeout)
-                                    const maxPages = Math.min(pdf.numPages, 5);
-                                    for (let i = 1; i <= maxPages; i++) {
-                                        const page = await pdf.getPage(i);
-                                        const textContent = await page.getTextContent();
-                                        const pageText = textContent.items.map(item => item.str).join(' ');
-                                        fullText += pageText + '\\n\\n';
+                                    for (var i = 1; i <= maxPages; i++) {
+                                        promises.push(pdf.getPage(i).then(function(page) {
+                                            return page.getTextContent().then(function(textContent) {
+                                                return textContent.items.map(function(item) { return item.str; }).join(' ');
+                                            });
+                                        }));
                                     }
                                     
-                                    if (fullText.trim().length > 100) {
-                                        console.log('PDF.js extraction successful:', fullText.length, 'characters');
-                                        resolve(fullText.trim());
-                                        return;
-                                    }
-                                } catch (pdfjsError) {
-                                    console.log('PDF.js extraction failed:', pdfjsError);
-                                }
-                            }
-                            
-                            // Fallback: try to extract basic text using simple parsing
-                            const uint8Array = new Uint8Array(arrayBuffer);
-                            let text = '';
-                            
-                            // Look for text streams in PDF
-                            for (let i = 0; i < uint8Array.length - 6; i++) {
-                                if (uint8Array[i] === 0x42 && uint8Array[i+1] === 0x54) { // "BT" (Begin Text)
-                                    let j = i + 2;
-                                    while (j < uint8Array.length - 2 && 
-                                           !(uint8Array[j] === 0x45 && uint8Array[j+1] === 0x54)) { // "ET" (End Text)
-                                        if (uint8Array[j] >= 32 && uint8Array[j] <= 126) {
-                                            text += String.fromCharCode(uint8Array[j]);
+                                    Promise.all(promises).then(function(pages) {
+                                        fullText = pages.join('\\n\\n');
+                                        if (fullText.trim().length > 100) {
+                                            console.log('PDF.js extraction successful:', fullText.length, 'characters');
+                                            resolve(fullText.trim());
+                                        } else {
+                                            reject(new Error('PDF.js extraction failed'));
                                         }
-                                        j++;
-                                    }
-                                    text += ' ';
-                                }
-                            }
-                            
-                            // Clean up extracted text
-                            text = text.replace(/[^\\x20-\\x7E\\u4e00-\\u9fff]/g, ' ')
-                                      .replace(/\\s+/g, ' ')
-                                      .trim();
-                            
-                            if (text.length > 50) {
-                                console.log('Fallback extraction successful:', text.length, 'characters');
-                                resolve(text);
+                                    }).catch(function(error) {
+                                        console.log('PDF.js extraction failed:', error);
+                                        reject(error);
+                                    });
+                                }).catch(function(error) {
+                                    console.log('PDF.js extraction failed:', error);
+                                    reject(error);
+                                });
                             } else {
-                                console.log('No sufficient text found in PDF');
-                                reject(new Error('无法从PDF中提取足够的文本内容'));
+                                reject(new Error('PDF.js not available'));
                             }
-                            
                         } catch (error) {
                             console.error('Frontend PDF parsing error:', error);
                             reject(new Error('前端PDF解析失败'));
                         }
                     };
                     
-                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.onerror = function() {
+                        reject(new Error('文件读取失败'));
+                    };
                     reader.readAsArrayBuffer(file);
                 });
             }
@@ -606,13 +581,14 @@ export default function handler(req, res) {
                 this.currentStep = 'analysis';
                 this.addProgressIndicator('步骤 4/5: 分析');
                 
-                setTimeout(async () => {
-                    const analysisPrompt = \`根据我的档案：\${this.userProfile.experience}年经验，\${this.userProfile.role}角色。请提供我需要采取的具体行动步骤来加强我的Tech Nation申请。专注于我需要做什么，而不是我的成功机会。\`;
+                var self = this;
+                setTimeout(function() {
+                    var analysisPrompt = '根据我的档案：' + self.userProfile.experience + '年经验，' + self.userProfile.role + '角色。请提供我需要采取的具体行动步骤来加强我的Tech Nation申请。专注于我需要做什么，而不是我的成功机会。';
                     
-                    await this.sendToAPI(analysisPrompt);
+                    self.sendToAPI(analysisPrompt);
                     
-                    setTimeout(() => {
-                        this.enableFreeChat();
+                    setTimeout(function() {
+                        self.enableFreeChat();
                     }, 2000);
                 }, 1000);
             }
@@ -628,59 +604,58 @@ export default function handler(req, res) {
                 this.addMessage('太好了！现在您可以向我询问任何关于Tech Nation申请流程的具体问题。💬', 'bot');
             }
             
-            async handleSend() {
+            handleSend() {
                 if (this.isLoading || this.messageInput.disabled) return;
                 
-                const message = this.messageInput.value.trim();
+                var message = this.messageInput.value.trim();
                 if (!message) return;
                 
                 this.addMessage(message, 'user');
                 this.messageInput.value = '';
                 
-                await this.sendToAPI(message);
+                this.sendToAPI(message);
             }
             
-            async sendToAPI(message) {
+            sendToAPI(message) {
                 if (this.isLoading) return;
                 
                 this.isLoading = true;
-                const typingElement = this.addMessage('思考中...', 'typing');
+                var typingElement = this.addMessage('思考中...', 'typing');
+                var self = this;
                 
-                try {
-                    const response = await fetch('/api/chat-zh', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            message: message,
-                            userId: this.getUserId(),
-                            resumeContent: this.resumeContent
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    this.chat.removeChild(typingElement);
+                fetch('/api/chat-zh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        userId: this.getUserId(),
+                        resumeContent: this.resumeContent
+                    })
+                }).then(function(response) {
+                    return response.json();
+                }).then(function(data) {
+                    self.chat.removeChild(typingElement);
                     
                     if (data.response) {
-                        this.addMessage(data.response, 'bot');
+                        self.addMessage(data.response, 'bot');
                     } else {
-                        this.addMessage('抱歉，我遇到了错误。请重试。', 'bot');
+                        self.addMessage('抱歉，我遇到了错误。请重试。', 'bot');
                     }
-                    
-                } catch (error) {
+                }).catch(function(error) {
                     console.error('API错误:', error);
-                    this.chat.removeChild(typingElement);
-                    this.addMessage('很抱歉，我遇到了错误。请重试。', 'bot');
-                } finally {
-                    this.isLoading = false;
-                    if (this.currentStep === 'free') {
-                        this.messageInput.disabled = false;
-                        this.sendBtn.disabled = false;
+                    self.chat.removeChild(typingElement);
+                    self.addMessage('很抱歉，我遇到了错误。请重试。', 'bot');
+                }).finally(function() {
+                    self.isLoading = false;
+                    if (self.currentStep === 'free') {
+                        self.messageInput.disabled = false;
+                        self.sendBtn.disabled = false;
                     }
-                }
+                });
             }
             
             addMessage(text, sender) {
-                const messageElement = document.createElement('div');
+                var messageElement = document.createElement('div');
                 messageElement.classList.add('message', sender + '-message');
                 messageElement.textContent = text;
                 this.chat.appendChild(messageElement);
@@ -690,7 +665,7 @@ export default function handler(req, res) {
             }
             
             addProgressIndicator(step) {
-                const progressElement = document.createElement('div');
+                var progressElement = document.createElement('div');
                 progressElement.classList.add('progress-indicator');
                 progressElement.innerHTML = '📍 ' + step;
                 this.chat.appendChild(progressElement);
@@ -709,13 +684,12 @@ export default function handler(req, res) {
             }
         }
         
-        let bot;
-        document.addEventListener('DOMContentLoaded', () => {
-            bot = new ChineseGuidedBot();
+        document.addEventListener('DOMContentLoaded', function() {
+            window.bot = new ChineseGuidedBot();
         });
     </script>
 </body>
-</html>\`;
+</html>`;
 
     return res.send(html);
 }
