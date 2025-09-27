@@ -337,6 +337,7 @@ export default function handler(req, res) {
                 this.addMessage(question, 'user');
                 await this.sendToAPI(question);
                 
+                // Longer delay to let user read the response
                 setTimeout(() => {
                     this.addMessage('您想要对您的个人档案进行个性化评估吗？', 'bot');
                     const buttonHtml = '<div class="button-group">' +
@@ -348,8 +349,8 @@ export default function handler(req, res) {
                     buttonMessage.className = 'message bot-message';
                     buttonMessage.innerHTML = buttonHtml;
                     this.chat.appendChild(buttonMessage);
-                    this.scrollToBottom();
-                }, 2000);
+                    this.scrollToBottomSlowly();
+                }, 3000); // Increased to 3 seconds
             }
             
             startAssessment() {
@@ -740,9 +741,22 @@ export default function handler(req, res) {
                 messageElement.classList.add('message', sender + '-message');
                 messageElement.textContent = text;
                 this.chat.appendChild(messageElement);
-                this.scrollToBottom();
+                
+                // For long bot messages (like prepared answers), scroll more gently
+                if (sender === 'bot' && text.length > 500) {
+                    setTimeout(() => this.scrollToBottomSlowly(), 300);
+                } else {
+                    this.scrollToBottom();
+                }
                 
                 return messageElement;
+            }
+            
+            scrollToBottomSlowly() {
+                this.chat.scrollTo({
+                    top: this.chat.scrollHeight,
+                    behavior: 'smooth'
+                });
             }
             
             addProgressIndicator(step) {
@@ -774,4 +788,4 @@ export default function handler(req, res) {
 </html>`;
 
     return res.send(html);
-}
+} 
