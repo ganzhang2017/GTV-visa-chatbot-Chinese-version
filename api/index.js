@@ -350,7 +350,7 @@ export default function handler(req, res) {
                     buttonMessage.innerHTML = buttonHtml;
                     this.chat.appendChild(buttonMessage);
                     this.scrollToBottomSlowly();
-                }, 3000); // Increased to 3 seconds
+                }, 10000); // Increased to 3 seconds
             }
             
             startAssessment() {
@@ -744,7 +744,7 @@ export default function handler(req, res) {
                 
                 // For long bot messages (like prepared answers), scroll more gently
                 if (sender === 'bot' && text.length > 500) {
-                    setTimeout(() => this.scrollToBottomSlowly(), 300);
+                    setTimeout(() => this.scrollToBottomSlowly(), 10000);
                 } else {
                     this.scrollToBottom();
                 }
